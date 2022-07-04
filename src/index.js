@@ -7,7 +7,11 @@ const {PORT} = process.env
 
 const express = Express()
 express.use(Express.json())
-express.use(Express.urlencoded({extended: true}))
+express.use(
+  Express.urlencoded({
+    extended: true
+  })
+)
 
 express.get('/tenants', async (request, response) => {
   try {
@@ -21,12 +25,14 @@ express.get('/tenants', async (request, response) => {
 
 express.post('/tenants', async (request, response) => {
   try {
-    const {body} = request
+    const {
+      body: {username}
+    } = request
 
-    if (!body.username) response.sendStatus(400)
+    if (!username) response.sendStatus(400)
 
     const data = {
-      username: body.username.trim()
+      username: username.trim()
     }
 
     const tenant = await Tenant.create(data)
@@ -39,5 +45,33 @@ express.post('/tenants', async (request, response) => {
     response.status(500).send(error.message)
   }
 })
+
+express.get(
+  '/tenants/:tenantId/usernames',
+  (request, response, next) => {
+    const {
+      params: {tenantId}
+    } = request
+
+    request.models = {
+      Username: getModel('Username', tenantId)
+    }
+
+    next()
+  },
+  async (request, response) => {
+    try {
+      const {
+        models: {Username}
+      } = request
+
+      const usernames = await Username.find()
+
+      response.json({usernames})
+    } catch (error) {
+      response.status(500).send(error.message)
+    }
+  }
+)
 
 express.listen(PORT)
